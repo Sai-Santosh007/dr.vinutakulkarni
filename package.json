@@ -1,0 +1,21 @@
+{
+  "name": "dr-vinuta-kulkarni-portfolio",
+  "version": "1.0.0",
+  "description": "Premium personal portfolio website for Dr. Vinuta Kulkarni, Eye Specialist & Ophthalmologist",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve . -l 3000",
+    "dev": "serve . -l 3000"
+  },
+  "keywords": [
+    "ophthalmology",
+    "doctor-portfolio",
+    "medical-website"
+  ],
+  "author": "WEBSITE JUGAAD",
+  "license": "ISC",
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}
+
