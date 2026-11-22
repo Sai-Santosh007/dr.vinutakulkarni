@@ -121,10 +121,82 @@ document.addEventListener('DOMContentLoaded', () => {
     currentScrollAnimation = requestAnimationFrame(step);
   }
 
+  // Helper: Detect whether the appointment section has entered the visible viewport
+  function hasReachedAppointmentSection() {
+    const section = document.getElementById('appointment');
+    if (!section) return false;
+    const rect = section.getBoundingClientRect();
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+    return rect.top < windowHeight;
+  }
+
+  function openAppointmentModal() {
+    const modal = document.getElementById('appointmentModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAppointmentModal() {
+    const modal = document.getElementById('appointmentModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  // Modal close triggers
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', closeAppointmentModal);
+  }
+
+  const appointmentModal = document.getElementById('appointmentModal');
+  if (appointmentModal) {
+    appointmentModal.addEventListener('click', (e) => {
+      if (e.target === appointmentModal) {
+        closeAppointmentModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      const modal = document.getElementById('appointmentModal');
+      if (modal && modal.classList.contains('active')) {
+        closeAppointmentModal();
+      }
+    }
+  });
+
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function(e) {
       const targetId = this.getAttribute('href');
       if (!targetId || targetId === '#') return;
+
+      // When clicking "Book Appointment" in header/navbar (desktop button or mobile CTA):
+      // Only "Book Appointment" buttons trigger the conditional pop-up dialog.
+      // "Schedule Appointment" nav link always navigates / smoothly scrolls to the appointment section.
+      const isBookAppointmentBtn = this.closest('.site-header') && 
+        targetId === '#appointment' && 
+        (this.classList.contains('btn-nav-cta') || this.closest('.nav-mobile-cta'));
+
+      if (isBookAppointmentBtn) {
+        if (!hasReachedAppointmentSection()) {
+          e.preventDefault();
+
+          // Close mobile menu if open
+          if (navMenu && navMenu.classList.contains('open')) {
+            navMenu.classList.remove('open');
+            if (header) header.classList.remove('nav-open');
+            if (mobileToggle) mobileToggle.setAttribute('aria-expanded', 'false');
+          }
+
+          openAppointmentModal();
+          return;
+        }
+      }
 
       const targetElement = document.querySelector(targetId);
       if (targetElement) {
@@ -171,93 +243,172 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 5. Appointment Enquiry Form Handling
-  const form = document.getElementById('appointmentForm');
-  const statusBox = document.getElementById('formStatus');
-  const submitBtn = document.getElementById('submitBtn');
+  // Reusable Appointment Form Controller (Handles In-Page and Modal Forms)
+  function setupAppointmentForm(config) {
+    const form = document.getElementById(config.formId);
+    const statusBox = document.getElementById(config.statusBoxId);
+    const dateInput = document.getElementById(config.dateId);
 
-  // Set minimum date for appointment to today
-  const dateInput = document.getElementById('preferredDate');
-  if (dateInput) {
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.setAttribute('min', today);
-  }
+    if (dateInput) {
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.setAttribute('min', today);
+    }
 
-  if (form) {
+    if (!form) return;
+
     form.addEventListener('submit', (e) => {
       e.preventDefault();
 
-      // Form validation
-      const name = document.getElementById('patientName');
-      const phone = document.getElementById('contactNumber');
-      const location = document.getElementById('preferredLocation');
-      const date = document.getElementById('preferredDate');
+      const name = document.getElementById(config.nameId);
+      const phone = document.getElementById(config.phoneId);
+      const location = document.getElementById(config.locationId);
+      const date = document.getElementById(config.dateId);
+      const messageField = document.getElementById(config.messageId);
+
+      const nameError = document.getElementById(config.nameErrorId);
+      const phoneError = document.getElementById(config.phoneErrorId);
+      const locationError = document.getElementById(config.locationErrorId);
+      const dateError = document.getElementById(config.dateErrorId);
 
       let isValid = true;
 
       // Validate Name
-      if (!name.value.trim()) {
-        document.getElementById('nameError').classList.add('visible');
-        name.classList.add('input-invalid');
+      if (!name || !name.value.trim()) {
+        if (nameError) nameError.classList.add('visible');
+        if (name) name.classList.add('input-invalid');
         isValid = false;
       } else {
-        document.getElementById('nameError').classList.remove('visible');
-        name.classList.remove('input-invalid');
+        if (nameError) nameError.classList.remove('visible');
+        if (name) name.classList.remove('input-invalid');
       }
 
       // Validate Phone (simple check: 8 to 15 digits/chars)
       const phoneRegex = /^[0-9+\s-]{8,15}$/;
-      if (!phone.value.trim() || !phoneRegex.test(phone.value.trim())) {
-        document.getElementById('phoneError').classList.add('visible');
-        phone.classList.add('input-invalid');
+      if (!phone || !phone.value.trim() || !phoneRegex.test(phone.value.trim())) {
+        if (phoneError) phoneError.classList.add('visible');
+        if (phone) phone.classList.add('input-invalid');
         isValid = false;
       } else {
-        document.getElementById('phoneError').classList.remove('visible');
-        phone.classList.remove('input-invalid');
+        if (phoneError) phoneError.classList.remove('visible');
+        if (phone) phone.classList.remove('input-invalid');
       }
 
       // Validate Location
-      if (!location.value) {
-        document.getElementById('locationError').classList.add('visible');
-        location.classList.add('input-invalid');
+      if (!location || !location.value) {
+        if (locationError) locationError.classList.add('visible');
+        if (location) location.classList.add('input-invalid');
         isValid = false;
       } else {
-        document.getElementById('locationError').classList.remove('visible');
-        location.classList.remove('input-invalid');
+        if (locationError) locationError.classList.remove('visible');
+        if (location) location.classList.remove('input-invalid');
       }
 
       // Validate Date
-      if (!date.value) {
-        document.getElementById('dateError').classList.add('visible');
-        date.classList.add('input-invalid');
+      if (!date || !date.value) {
+        if (dateError) dateError.classList.add('visible');
+        if (date) date.classList.add('input-invalid');
         isValid = false;
       } else {
-        document.getElementById('dateError').classList.remove('visible');
-        date.classList.remove('input-invalid');
+        if (dateError) dateError.classList.remove('visible');
+        if (date) date.classList.remove('input-invalid');
       }
 
       if (!isValid) return;
 
-      // Submission feedback (Transparent: Not connected to live backend yet)
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting Request...';
+      // Collect entered appointment details
+      const patientName = name.value.trim();
+      const contactNumber = phone.value.trim();
+      const clinicLocation = location.value;
+      const reasonForVisit = messageField ? messageField.value.trim() : '';
 
-      setTimeout(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit Appointment Enquiry';
-        
+      let formattedDate = date.value;
+      try {
+        const [year, month, day] = date.value.split('-');
+        if (year && month && day) {
+          const dateObj = new Date(year, month - 1, day);
+          formattedDate = dateObj.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          });
+        }
+      } catch (err) {
+        formattedDate = date.value;
+      }
+
+      // Professional WhatsApp message with each detail on a separate line
+      const messageLines = [
+        'Hello Dr. Vinuta Kulkarni,',
+        '',
+        'I would like to request an eye consultation appointment. Here are my details:',
+        `• Patient Name: ${patientName}`,
+        `• Contact Number: ${contactNumber}`,
+        `• Preferred Location: ${clinicLocation}`,
+        `• Preferred Date: ${formattedDate}`
+      ];
+
+      if (reasonForVisit) {
+        messageLines.push(`• Reason for Visit: ${reasonForVisit}`);
+      }
+
+      messageLines.push('', 'Please let me know the available consultation slot. Thank you.');
+
+      const fullMessage = messageLines.join('\n');
+      const cleanPhone = '919538756063';
+      const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(fullMessage)}`;
+
+      if (statusBox) {
         statusBox.style.display = 'block';
-        statusBox.className = 'form-status success';
+        statusBox.className = 'form-status whatsapp-redirect';
         statusBox.innerHTML = `
-          <strong>Appointment Enquiry Received</strong><br>
-          Thank you, <em>${escapeHtml(name.value.trim())}</em>. Your consultation request for <strong>${escapeHtml(location.value)}</strong> has been recorded.<br><br>
-          <em>Please note:</em> Prior appointments must be confirmed by the clinic desk. You will be contacted shortly on <strong>${escapeHtml(phone.value.trim())}</strong> to finalize your appointment time. For urgent confirmation, please call <a href="tel:9606089849" style="font-weight:700; text-decoration:underline;">9606089849</a>.
+          <strong>Continue to WhatsApp to send your appointment request</strong>
+          <p>Your appointment details have been prepared. Please click the button below to review your message and press <strong>Send</strong> in WhatsApp:</p>
+          <a href="${whatsappUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="flex-shrink:0;">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.23 8.23 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.49-1.4-1.74-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.78 2.71 4.3 3.8.6.26 1.07.42 1.44.54.6.19 1.15.17 1.59.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.12-.22-.19-.47-.32"/>
+            </svg>
+            Open in WhatsApp &amp; Send Request
+          </a>
+          <p class="whatsapp-fallback-note">
+            Unable to open WhatsApp? You can call or message the clinic directly at <a href="tel:919538756063"><strong>+91 95387 56063</strong></a>.
+          </p>
         `;
+      }
 
-        form.reset();
-      }, 700);
+      // Automatically open WhatsApp in a new tab/window
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     });
   }
+
+  // Initialize in-page appointment form
+  setupAppointmentForm({
+    formId: 'appointmentForm',
+    nameId: 'patientName',
+    nameErrorId: 'nameError',
+    phoneId: 'contactNumber',
+    phoneErrorId: 'phoneError',
+    locationId: 'preferredLocation',
+    locationErrorId: 'locationError',
+    dateId: 'preferredDate',
+    dateErrorId: 'dateError',
+    messageId: 'message',
+    statusBoxId: 'formStatus'
+  });
+
+  // Initialize modal appointment form
+  setupAppointmentForm({
+    formId: 'modalAppointmentForm',
+    nameId: 'modalPatientName',
+    nameErrorId: 'modalNameError',
+    phoneId: 'modalContactNumber',
+    phoneErrorId: 'modalPhoneError',
+    locationId: 'modalPreferredLocation',
+    locationErrorId: 'modalLocationError',
+    dateId: 'modalPreferredDate',
+    dateErrorId: 'modalDateError',
+    messageId: 'modalMessage',
+    statusBoxId: 'modalFormStatus'
+  });
 
   // 6. Patient Reviews Carousel Controller
   initReviewsCarousel();
@@ -526,6 +677,10 @@ window.selectClinic = function(clinicValue) {
   const selectEl = document.getElementById('preferredLocation');
   if (selectEl) {
     selectEl.value = clinicValue;
+  }
+  const modalSelectEl = document.getElementById('modalPreferredLocation');
+  if (modalSelectEl) {
+    modalSelectEl.value = clinicValue;
   }
 };
 

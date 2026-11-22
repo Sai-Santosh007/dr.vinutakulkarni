@@ -732,7 +732,7 @@
               </div>
               <div class="call-details">
                 <span class="call-label">For direct appointment request</span>
-                <a href="tel:9606089849" class="call-number">9606089849</a>
+                <a href="tel:919538756063" class="call-number">+91 95387 56063</a>
                 <span class="call-note">Click to call directly for urgent queries &amp; timings</span>
               </div>
             </div>
@@ -851,7 +851,7 @@
         <div class="footer-contact">
           <h4 class="footer-col-title">Appointments</h4>
           <p class="footer-phone-label">Direct Appointment Helpline:</p>
-          <a href="tel:9606089849" class="footer-phone">9606089849</a>
+          <a href="tel:919538756063" class="footer-phone">+91 95387 56063</a>
           <p class="footer-note">Prior appointments must be made.</p>
           <div class="footer-cta-wrapper">
             <a href="#appointment" class="btn btn-outline btn-sm">Schedule Visit</a>
@@ -869,6 +869,70 @@
       </div>
     </div>
   </footer>
+
+  <!-- ==========================================================================
+       BOOK APPOINTMENT POP-UP DIALOG (MODAL)
+       ========================================================================== -->
+  <div class="appointment-modal-overlay" id="appointmentModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modalFormTitle">
+    <div class="appointment-modal-dialog">
+      <button type="button" class="modal-close-btn" id="modalCloseBtn" aria-label="Close appointment dialog">&times;</button>
+      
+      <div class="appointment-form-box modal-form-box">
+        <h3 class="form-title" id="modalFormTitle">Appointment Enquiry Request</h3>
+        <p class="form-subtitle">
+          Please note: Submitting this form sends an appointment request. Our clinic desk will contact you to confirm the final slot.
+        </p>
+
+        <form id="modalAppointmentForm" class="appointment-form" novalidate>
+          <div class="form-group">
+            <label for="modalPatientName" class="form-label">Patient Full Name <span class="required">*</span></label>
+            <input type="text" id="modalPatientName" name="patientName" class="form-control" placeholder="Enter patient's name" required>
+            <div class="form-error" id="modalNameError">Please enter patient name</div>
+          </div>
+
+          <div class="form-group">
+            <label for="modalContactNumber" class="form-label">Contact Number <span class="required">*</span></label>
+            <input type="tel" id="modalContactNumber" name="contactNumber" class="form-control" placeholder="e.g. 9876543210" required>
+            <div class="form-error" id="modalPhoneError">Please enter a valid phone number</div>
+          </div>
+
+          <div class="form-group">
+            <label for="modalPreferredLocation" class="form-label">Preferred Consultation Location <span class="required">*</span></label>
+            <select id="modalPreferredLocation" name="preferredLocation" class="form-control" required>
+              <option value="" disabled selected>-- Select Clinic Location --</option>
+              <option value="SARADEV EYE HOSPITAL – JAYANAGAR">Saradev Eye Hospital – Jayanagar (Saturday Only | 1:30 PM - 3:30 PM)</option>
+              <option value="PRASAD EYE CARE – KUMARSWAMY LAYOUT">Prasad Eye Care – Kumarswamy Layout (Mon, Wed, Fri, Sat | 4:30 PM - 6:30 PM)</option>
+              <option value="PRASAD EYE CARE – GIRINAGAR">Prasad Eye Care – Girinagar (Tue, Thu | 4:30 PM - 6:30 PM)</option>
+            </select>
+            <div class="form-error" id="modalLocationError">Please choose a preferred location</div>
+          </div>
+
+          <div class="form-group">
+            <label for="modalPreferredDate" class="form-label">Preferred Date <span class="required">*</span></label>
+            <input type="date" id="modalPreferredDate" name="preferredDate" class="form-control" required>
+            <div class="form-error" id="modalDateError">Please select a preferred date</div>
+          </div>
+
+          <div class="form-group">
+            <label for="modalMessage" class="form-label">Reason for Visit / Message (Optional)</label>
+            <textarea id="modalMessage" name="message" class="form-control" rows="3" placeholder="Describe symptoms or purpose (e.g. Cataract checkup, glasses prescription, eye pain)"></textarea>
+          </div>
+
+          <div class="form-notice">
+            <small>* This form is an appointment enquiry. You will receive a confirmation call from the clinic coordinator.</small>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="modalSubmitBtn">
+            Submit Appointment Enquiry
+          </button>
+
+          <div class="form-status" id="modalFormStatus" style="display:none;" role="status">
+            <!-- Feedback dynamically injected -->
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
