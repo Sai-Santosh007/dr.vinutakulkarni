@@ -82,6 +82,8 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 section[id] {
@@ -98,6 +100,7 @@ body {
   color: var(--color-text-main);
   line-height: 1.72;
   overflow-x: clip;
+  max-width: 100%;
   letter-spacing: -0.005em;
 }
 
@@ -1304,6 +1307,7 @@ button, input, select, textarea {
 
 .carousel-track {
   display: flex;
+  position: relative;
   gap: 24px;
   will-change: transform;
   transition: transform 0.55s cubic-bezier(0.25, 1, 0.5, 1);
@@ -1485,34 +1489,150 @@ button, input, select, textarea {
 }
 
 @media (max-width: 640px) {
-  .reviews-carousel-wrapper {
-    gap: 10px;
-    margin-top: 32px;
-  }
-
+  /* 1. Hide both carousel arrow buttons strictly on mobile 320px - 640px */
   .carousel-btn {
-    width: 36px;
-    height: 36px;
+    display: none !important;
   }
 
-  .carousel-btn svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  .carousel-track .review-card {
-    flex: 0 0 100%;
+  /* 2. Carousel wrapper & viewport */
+  .reviews-carousel-wrapper {
+    display: block;
+    gap: 0;
+    margin-top: 24px;
+    width: 100%;
     max-width: 100%;
-    min-width: 0;
-    padding: 26px 20px;
+    position: relative;
+    overflow: hidden;
   }
 
+  .carousel-viewport {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 10px 0 18px;
+  }
+
+  .carousel-track {
+    display: flex;
+    position: relative;
+    width: 100%;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  /* 3. Review Card sizing for mobile 320px - 640px:
+     Card fits comfortably with subtle visible previews of adjacent cards */
+  .carousel-track .review-card {
+    flex: 0 0 calc(85% - 6px);
+    width: calc(85% - 6px);
+    max-width: calc(85% - 6px);
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 22px 18px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    opacity: 0.8;
+    transition: opacity 0.35s ease, transform var(--transition-smooth), box-shadow var(--transition-smooth);
+  }
+
+  .carousel-track .review-card.active-card {
+    opacity: 1;
+    box-shadow: 0 8px 24px rgba(7, 19, 34, 0.12);
+    border-color: rgba(20, 75, 136, 0.28);
+  }
+
+  .review-card-header {
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+  }
+
+  .review-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 0.82rem;
+  }
+
+  .review-author {
+    font-size: 1.12rem;
+    line-height: 1.25;
+  }
+
+  .review-stars {
+    font-size: 0.82rem;
+  }
+
+  .review-body {
+    gap: 10px;
+  }
+
+  .review-body p {
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  /* 4. Pagination & CTA spacing */
   .carousel-pagination {
-    margin-top: 20px;
+    margin-top: 18px;
+  }
+
+  .carousel-dots {
+    gap: 6px;
+  }
+
+  .carousel-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .carousel-dot.active {
+    width: 22px;
+    border-radius: 4px;
   }
 
   .reviews-cta {
-    margin-top: 28px;
+    margin-top: 24px;
+  }
+
+  .reviews-rating-summary {
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 14px;
+    gap: 8px;
+  }
+
+  .rating-stars {
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+
+  .rating-text {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .reviews-rating-summary {
+    flex-wrap: wrap;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+  }
+
+  .carousel-track .review-card {
+    padding: 20px 16px;
+  }
+
+  .review-author {
+    font-size: 1.04rem;
+  }
+
+  .review-body p {
+    font-size: 0.85rem;
+    line-height: 1.55;
   }
 }
 
@@ -1977,7 +2097,7 @@ button, input, select, textarea {
   background-color: rgba(7, 19, 34, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: 24px var(--container-px);
@@ -1988,6 +2108,7 @@ button, input, select, textarea {
 }
 
 .appointment-modal-overlay.active {
+  display: flex;
   opacity: 1;
   visibility: visible;
 }
@@ -2411,5 +2532,29 @@ button, input, select, textarea {
   
   .divider-line {
     width: 100%;
+  }
+
+  .brand-title {
+    font-size: 1.45rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.64rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .nav-container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .brand-title {
+    font-size: 1.25rem;
+  }
+
+  .brand-subtitle {
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
   }
 }

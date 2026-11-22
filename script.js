@@ -436,17 +436,29 @@ function initReviewsCarousel() {
     const card = cards[0];
     if (!card) return 0;
     const style = window.getComputedStyle(track);
-    const gap = parseFloat(style.gap) || 24;
+    const gap = parseFloat(style.gap) || (window.innerWidth <= 640 ? 12 : 24);
     return card.offsetWidth + gap;
   }
 
-  // Maximum scroll index: at the final review position, the end of the last card aligns with the viewport right edge
+  // Maximum scroll index:
+  // On mobile (320px - 640px): each review card is an individual slide (0 to totalCards - 1)
+  // On desktop / tablet (> 640px): multi-card stepped scrolling
   function getMaxIndex() {
+    if (window.innerWidth <= 640) {
+      return totalCards - 1;
+    }
     const totalContentWidth = track.scrollWidth;
     const viewportWidth = viewport.clientWidth;
     const step = getStepSize();
     if (step <= 0 || totalContentWidth <= viewportWidth) return 0;
     return Math.max(0, Math.ceil((totalContentWidth - viewportWidth) / step));
+  }
+
+  // Mark the active card for focused presentation
+  function updateActiveCardClass() {
+    cards.forEach((card, idx) => {
+      card.classList.toggle('active-card', idx === currentIndex);
+    });
   }
 
   // Render pagination dots
@@ -481,8 +493,7 @@ function initReviewsCarousel() {
   }
 
   function updateCarouselPosition() {
-    const step = getStepSize();
-    if (step <= 0) return;
+    const isMobile = window.innerWidth <= 640;
     const maxIdx = getMaxIndex();
     if (currentIndex > maxIdx) {
       currentIndex = maxIdx;
@@ -491,6 +502,34 @@ function initReviewsCarousel() {
     const totalContentWidth = track.scrollWidth;
     const viewportWidth = viewport.clientWidth;
     const maxTranslate = Math.max(0, totalContentWidth - viewportWidth);
+
+    if (isMobile) {
+      let shift = 0;
+      const card = cards[currentIndex];
+      const cardWidth = card ? card.offsetWidth : 0;
+      const cardLeft = card ? card.offsetLeft : 0;
+
+      if (currentIndex === 0) {
+        // 1. At the first review: show only the next card's edge on the right
+        shift = 0;
+      } else if (currentIndex >= totalCards - 1) {
+        // 3. At the final review: show only the previous card's edge on the left
+        shift = maxTranslate;
+      } else {
+        // 2. In the middle: centre active review card horizontally with small previews on both sides
+        const centerOffset = (viewportWidth - cardWidth) / 2;
+        shift = Math.max(0, Math.min(maxTranslate, cardLeft - centerOffset));
+      }
+
+      track.style.transform = `translateX(-${shift}px)`;
+      updateActiveCardClass();
+      updateDots();
+      return;
+    }
+
+    // Desktop and Tablet layout (> 640px)
+    const step = getStepSize();
+    if (step <= 0) return;
 
     let shift = 0;
     if (currentIndex === 0) {
@@ -504,12 +543,12 @@ function initReviewsCarousel() {
     } else {
       // 2. In intermediate positions: show previous-card preview on the left
       // and next-card preview on the right.
-      // An offset peek (e.g. 50px-60px) gives an intentional glimpse of the preceding card.
       const peekOffset = Math.min(60, Math.round(step * 0.12));
       shift = Math.min(maxTranslate, Math.max(0, (currentIndex * step) - peekOffset));
     }
 
     track.style.transform = `translateX(-${shift}px)`;
+    updateActiveCardClass();
     updateDots();
   }
 
@@ -573,12 +612,18 @@ function initReviewsCarousel() {
   }
 
   // Pause automatic scrolling ONLY when hovering directly over a review card.
-  // Hovering over headings, subtitle, margins, or navigation arrows does NOT pause auto-scroll.
-  cards.forEach(card => {
+  // On mobile (<= 640px), tapping on an adjacent card preview immediately navigates to it.
+  cards.forEach((card, idx) => {
     card.addEventListener('mouseenter', stopAutoPlay);
     card.addEventListener('mouseleave', startAutoPlay);
     card.addEventListener('focusin', stopAutoPlay);
     card.addEventListener('focusout', startAutoPlay);
+    card.addEventListener('click', () => {
+      if (window.innerWidth <= 640 && idx !== currentIndex) {
+        goToIndex(idx);
+        startAutoPlay();
+      }
+    });
   });
 
   // Touch Swipe Support (Mobile & Touch Devices)
@@ -586,7 +631,7 @@ function initReviewsCarousel() {
   let touchEndX = 0;
   let touchStartY = 0;
   let touchEndY = 0;
-  const SWIPE_THRESHOLD = 40;
+  const SWIPE_THRESHOLD = 35;
 
   viewport.addEventListener('touchstart', (e) => {
     stopAutoPlay();
