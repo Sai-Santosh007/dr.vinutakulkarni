@@ -1335,6 +1335,7 @@ button, input, select, textarea {
   padding: 34px 32px;
   display: flex;
   flex-direction: column;
+  height: 380px;
   box-shadow: var(--shadow-subtle);
   transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
 }
@@ -1352,6 +1353,7 @@ button, input, select, textarea {
   padding-bottom: 18px;
   margin-bottom: 18px;
   border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
 }
 
 .review-avatar {
@@ -1394,7 +1396,34 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex-grow: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+/* Custom subtle scrollbar for review body */
+.review-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.review-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.review-body::-webkit-scrollbar-thumb {
+  background-color: rgba(20, 75, 136, 0.2);
+  border-radius: 4px;
+}
+
+.review-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(20, 75, 136, 0.38);
+}
+
+.review-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 75, 136, 0.2) transparent;
 }
 
 .review-body p {
@@ -1436,6 +1465,14 @@ button, input, select, textarea {
 .carousel-btn:focus-visible {
   outline: 2px solid var(--color-royal-blue);
   outline-offset: 2px;
+}
+
+.carousel-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* Pagination & See All Reviews CTA */
@@ -1533,7 +1570,7 @@ button, input, select, textarea {
     border-radius: var(--radius-sm);
     display: flex;
     flex-direction: column;
-    height: auto;
+    height: 340px;
     opacity: 0.8;
     transition: opacity 0.35s ease, transform var(--transition-smooth), box-shadow var(--transition-smooth);
   }

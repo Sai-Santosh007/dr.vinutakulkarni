@@ -550,14 +550,30 @@ function initReviewsCarousel() {
     track.style.transform = `translateX(-${shift}px)`;
     updateActiveCardClass();
     updateDots();
+    updateButtonStates();
+  }
+
+  function updateButtonStates() {
+    const maxIdx = getMaxIndex();
+    if (prevBtn) {
+      const isAtStart = currentIndex <= 0;
+      prevBtn.disabled = isAtStart;
+      prevBtn.setAttribute('aria-disabled', isAtStart ? 'true' : 'false');
+    }
+    if (nextBtn) {
+      const isAtEnd = currentIndex >= maxIdx;
+      nextBtn.disabled = isAtEnd;
+      nextBtn.setAttribute('aria-disabled', isAtEnd ? 'true' : 'false');
+    }
   }
 
   function goToIndex(idx) {
     const maxIdx = getMaxIndex();
+    // Clamp to boundaries [0, maxIdx]; never loop or jump to opposite side
     if (idx > maxIdx) {
-      currentIndex = 0; // Seamless loop to beginning
+      currentIndex = maxIdx;
     } else if (idx < 0) {
-      currentIndex = maxIdx; // Seamless loop to end
+      currentIndex = 0;
     } else {
       currentIndex = idx;
     }
@@ -566,18 +582,16 @@ function initReviewsCarousel() {
 
   function nextSlide() {
     const maxIdx = getMaxIndex();
-    if (currentIndex >= maxIdx) {
-      goToIndex(0);
-    } else {
+    if (currentIndex < maxIdx) {
       goToIndex(currentIndex + 1);
+    } else {
+      // Reached the rightmost boundary: stop scrolling naturally without looping
+      stopAutoPlay();
     }
   }
 
   function prevSlide() {
-    const maxIdx = getMaxIndex();
-    if (currentIndex <= 0) {
-      goToIndex(maxIdx);
-    } else {
+    if (currentIndex > 0) {
       goToIndex(currentIndex - 1);
     }
   }
@@ -626,24 +640,26 @@ function initReviewsCarousel() {
     });
   });
 
-  // Touch Swipe Support (Mobile & Touch Devices)
-  let touchStartX = 0;
-  let touchEndX = 0;
-  let touchStartY = 0;
-  let touchEndY = 0;
+  // Touch Swipe & Mouse Drag Support
+  let isPointerDown = false;
+  let pointerStartX = 0;
+  let pointerStartY = 0;
+  let pointerEndX = 0;
+  let pointerEndY = 0;
   const SWIPE_THRESHOLD = 35;
 
+  // Touch Swipe Support (Mobile & Touch Devices)
   viewport.addEventListener('touchstart', (e) => {
     stopAutoPlay();
-    touchStartX = e.changedTouches[0].clientX;
-    touchStartY = e.changedTouches[0].clientY;
+    pointerStartX = e.changedTouches[0].clientX;
+    pointerStartY = e.changedTouches[0].clientY;
   }, { passive: true });
 
   viewport.addEventListener('touchend', (e) => {
-    touchEndX = e.changedTouches[0].clientX;
-    touchEndY = e.changedTouches[0].clientY;
-    const diffX = touchEndX - touchStartX;
-    const diffY = touchEndY - touchStartY;
+    pointerEndX = e.changedTouches[0].clientX;
+    pointerEndY = e.changedTouches[0].clientY;
+    const diffX = pointerEndX - pointerStartX;
+    const diffY = pointerEndY - pointerStartY;
 
     // Only swipe if movement is predominantly horizontal
     if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
@@ -653,48 +669,125 @@ function initReviewsCarousel() {
         prevSlide();
       }
     }
-    startAutoPlay();
   }, { passive: true });
 
-  // Laptop Trackpad / Mouse Wheel Support:
-  // Allows two-finger horizontal or vertical swipe/scroll over the reviews area
-  // to smoothly trigger exactly one immediate review card advance per gesture.
-  let isWheelThrottled = false;
-  let wheelDeltaAccumulator = 0;
-  const WHEEL_THRESHOLD = 25; // Sensitivity threshold for intentional two-finger gesture
+  // Mouse Drag Support (Desktop)
+  viewport.addEventListener('mousedown', (e) => {
+    // Avoid triggering drag if user clicked interactive elements
+    if (e.target.closest('button, a, input, textarea, select')) return;
+    isPointerDown = true;
+    stopAutoPlay();
+    pointerStartX = e.clientX;
+    pointerStartY = e.clientY;
+    pointerEndX = e.clientX;
+    pointerEndY = e.clientY;
+    track.classList.add('is-dragging');
+  });
 
-  viewport.addEventListener('wheel', (e) => {
-    // Detect horizontal trackpad swipe or shift-wheel; fall back to vertical scroll if over reviews
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (e.shiftKey ? e.deltaY : e.deltaX);
+  window.addEventListener('mousemove', (e) => {
+    if (!isPointerDown) return;
+    pointerEndX = e.clientX;
+    pointerEndY = e.clientY;
+  });
 
-    // If there is significant horizontal swipe, prevent page from erratic back/forward navigation
-    if (Math.abs(e.deltaX) > 8) {
-      e.preventDefault();
-    }
+  window.addEventListener('mouseup', (e) => {
+    if (!isPointerDown) return;
+    isPointerDown = false;
+    track.classList.remove('is-dragging');
 
-    if (isWheelThrottled) return;
+    const diffX = pointerEndX - pointerStartX;
+    const diffY = pointerEndY - pointerStartY;
 
-    wheelDeltaAccumulator += delta;
-
-    if (Math.abs(wheelDeltaAccumulator) >= WHEEL_THRESHOLD) {
-      isWheelThrottled = true;
-      stopAutoPlay();
-
-      if (wheelDeltaAccumulator > 0) {
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > SWIPE_THRESHOLD) {
+      if (diffX < 0) {
         nextSlide();
       } else {
         prevSlide();
       }
-
-      startAutoPlay();
-      wheelDeltaAccumulator = 0;
-
-      // Throttle window so one distinct flick/swipe moves exactly one card
-      setTimeout(() => {
-        isWheelThrottled = false;
-        wheelDeltaAccumulator = 0;
-      }, 450);
     }
+  });
+
+  // Natural, continuous one-card-at-a-time wheel / trackpad scroll
+  // Root cause resolved: Trackpad/wheel momentum streams fire high delta numbers across dozens of events.
+  // By analyzing gesture onset, sign change, and momentum decay (derivative inflection):
+  // 1. A single scroll gesture (short or large) triggers exactly ONE card advance at gesture onset.
+  // 2. Trailing inertia / deceleration within the same stroke is recognized and absorbed (never jumps to the last card).
+  // 3. Repeated rapid scrolls or deliberate continuous scrolling each detect new intentional pushes and advance cards sequentially.
+  // 4. No mouse movement or gesture reset is ever required.
+  let lastWheelTime = 0;
+  let prevAbsDelta = 0;
+  let gestureActive = false;
+  let gestureDecaying = false;
+  let gestureDirection = 0;
+
+  viewport.addEventListener('wheel', (e) => {
+    // If scrolling vertically inside a scrollable review text (.review-body)
+    const scrollableBody = e.target.closest('.review-body');
+    if (scrollableBody && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      const isScrollable = scrollableBody.scrollHeight > scrollableBody.clientHeight;
+      if (isScrollable) {
+        const atTop = scrollableBody.scrollTop <= 0 && e.deltaY < 0;
+        const atBottom = (scrollableBody.scrollTop + scrollableBody.clientHeight >= scrollableBody.scrollHeight - 1) && e.deltaY > 0;
+        if (!atTop && !atBottom) {
+          return;
+        }
+      }
+    }
+
+    const isHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    const rawDelta = isHorizontal ? e.deltaX : (e.shiftKey ? e.deltaY : e.deltaY);
+
+    if (Math.abs(rawDelta) < 3) return;
+
+    e.preventDefault();
+    stopAutoPlay();
+
+    const now = performance.now();
+    const timeDelta = now - lastWheelTime;
+    lastWheelTime = now;
+
+    const currentSign = rawDelta > 0 ? 1 : -1;
+    const absDelta = Math.abs(rawDelta);
+
+    // If gap between events exceeds 80ms, it's a completely new gesture
+    if (timeDelta > 80) {
+      gestureActive = false;
+      gestureDecaying = false;
+      prevAbsDelta = 0;
+    }
+
+    // Direction reversal immediately begins a new gesture in opposite direction
+    if (currentSign !== gestureDirection) {
+      gestureActive = false;
+      gestureDecaying = false;
+      gestureDirection = currentSign;
+    }
+
+    // Check for a new user acceleration (subsequent flick during continuous scrolling)
+    // If inertia was decaying and delta suddenly spikes up significantly, it's an intentional new stroke
+    const isNewIntentionalPush = gestureDecaying && (absDelta > prevAbsDelta * 1.5 && absDelta > 14);
+
+    if (!gestureActive || isNewIntentionalPush) {
+      // First event of a gesture (or intentional new stroke during continuous scroll):
+      gestureActive = true;
+      gestureDecaying = false;
+      gestureDirection = currentSign;
+
+      // Advance or move back by strictly ONE card
+      if (currentSign > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    } else {
+      // Inside an ongoing momentum stream:
+      // Mark as decaying when deltas start dropping
+      if (absDelta < prevAbsDelta) {
+        gestureDecaying = true;
+      }
+    }
+
+    prevAbsDelta = absDelta;
   }, { passive: false });
 
   // Handle window resizing (recompute dots and position)
